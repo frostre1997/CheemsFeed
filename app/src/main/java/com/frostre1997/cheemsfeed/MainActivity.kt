@@ -1,4 +1,4 @@
-package com.frostre1997.glacierfeed
+package com.frostre1997.cheemsfeed
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
@@ -19,7 +19,7 @@ class MainActivity : AppCompatActivity() {
 
         // Create dummy data for testing
         val dummyData = listOf(
-            "Welcome to GlacierFeed",
+            "Welcome to CheemsFeed",
             "This is a test post",
             "Minimalist Reddit Client",
             "Android development from scratch"

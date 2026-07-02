@@ -1,4 +1,4 @@
-package com.frostre1997.glacierfeed
+package com.frostre1997.cheemsfeed
 
 import android.view.LayoutInflater
 import android.view.View

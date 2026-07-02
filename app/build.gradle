@@ -13,7 +13,7 @@ android {
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.frostre1997.glacierfeed"
+        applicationId "com.frostre1997.cheemsfeed"
         minSdk 21
         targetSdk 34
         

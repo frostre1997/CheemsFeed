@@ -7,18 +7,18 @@
     android:background="?attr/colorBackground">
 
     <!-- Top App Bar -->
-    <com.google.android.material.appbarcompat.AppBarLayout
+    <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-        <com.google.android.material.appbars.MaterialToolbar
+        <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/toolbar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             app:title="@string/title_settings"
             app:navigationIcon="@drawable/ic_back" />
 
-    </com.google.android.material.appbarcompat.AppBarLayout>
+    </com.google.android.material.appbar.AppBarLayout>
 
     <!-- Settings Container -->
     <ScrollView

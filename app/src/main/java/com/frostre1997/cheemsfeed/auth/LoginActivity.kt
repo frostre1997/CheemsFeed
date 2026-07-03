@@ -1,0 +1,117 @@
+package com.frostre1997.cheemsfeed.auth
+
+import android.content.Intent
+import android.net.Uri
+import android.os.Bundle
+import android.widget.Button
+import android.widget.ProgressBar
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
+import com.frostre1997.cheemsfeed.MainActivity
+import com.frostre1997.cheemsfeed.R
+import com.frostre1997.cheemsfeed.api.RedditApiClient
+import kotlinx.coroutines.launch
+
+class LoginActivity : AppCompatActivity() {
+    
+    private lateinit var authManager: RedditAuthManager
+    private lateinit var loginButton: Button
+    private lateinit var progressBar: ProgressBar
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_login)
+
+        val apiService = RedditApiClient.createAuthService()
+        authManager = RedditAuthManager(this, apiService)
+
+        loginButton = findViewById(R.id.btn_login)
+        progressBar = findViewById(R.id.progress_bar)
+
+        // Check if user is already logged in
+        if (authManager.isLoggedIn()) {
+            navigateToMain()
+            return
+        }
+
+        loginButton.setOnClickListener {
+            openRedditAuth()
+        }
+
+        // Handle OAuth callback
+        handleAuthCallback(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleAuthCallback(intent)
+    }
+
+    private fun openRedditAuth() {
+        val authUrl = authManager.getAuthorizationUrl()
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(authUrl))
+        startActivity(intent)
+    }
+
+    private fun handleAuthCallback(intent: Intent?) {
+        val uri = intent?.data
+        if (uri != null && uri.scheme == "cheemsfeed") {
+            val code = uri.getQueryParameter("code")
+            val state = uri.getQueryParameter("state")
+            val error = uri.getQueryParameter("error")
+
+            when {
+                error != null -> {
+                    Toast.makeText(
+                        this,
+                        "Authorization failed: $error",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+                code != null && state != null -> {
+                    // Validate state parameter
+                    val savedState = authManager.getState()
+                    if (state == savedState) {
+                        exchangeCodeForToken(code)
+                        authManager.clearState()
+                    } else {
+                        Toast.makeText(
+                            this,
+                            "State mismatch - possible security issue",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun exchangeCodeForToken(code: String) {
+        progressBar.visibility = android.view.View.VISIBLE
+        loginButton.isEnabled = false
+
+        lifecycleScope.launch {
+            val success = authManager.exchangeCodeForToken(code)
+            progressBar.visibility = android.view.View.GONE
+            loginButton.isEnabled = true
+
+            if (success) {
+                Toast.makeText(this@LoginActivity, "Login successful!", Toast.LENGTH_SHORT).show()
+                navigateToMain()
+            } else {
+                Toast.makeText(
+                    this@LoginActivity,
+                    "Failed to exchange code for token",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+    }
+
+    private fun navigateToMain() {
+        val intent = Intent(this, MainActivity::class.java)
+        startActivity(intent)
+        finish()
+    }
+}

@@ -6,7 +6,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
 
-class PostAdapter(private val posts: List<String>) : RecyclerView.Adapter<PostAdapter.PostViewHolder>() {
+class PostAdapter(private val posts: List<RedditPost>) : RecyclerView.Adapter<PostAdapter.PostViewHolder>() {
 
     class PostViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val textView: TextView = view.findViewById(android.R.id.text1)

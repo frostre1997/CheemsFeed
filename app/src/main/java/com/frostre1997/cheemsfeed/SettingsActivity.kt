@@ -8,7 +8,7 @@ import android.widget.Spinner
 import android.widget.ArrayAdapter
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.appbars.MaterialToolbar
+import com.google.android.material.appbar.MaterialToolbar
 
 class SettingsActivity : AppCompatActivity() {
     private lateinit var themeSpinner: Spinner

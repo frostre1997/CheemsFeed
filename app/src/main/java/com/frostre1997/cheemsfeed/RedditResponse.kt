@@ -20,5 +20,4 @@ data class PostData(
     val created_utc: Long?,
     val num_comments: Int?,
     val score: Int?
-    // add any other fields you need
 )

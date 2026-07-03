@@ -19,7 +19,9 @@ class PostAdapter(private val posts: List<RedditPost>) : RecyclerView.Adapter<Po
     }
 
     override fun onBindViewHolder(holder: PostViewHolder, position: Int) {
-        holder.textView.text = posts[position]
+        val post = posts[position]
+        
+        holder.textView.text = post.title
     }
 
     override fun getItemCount() = posts.size

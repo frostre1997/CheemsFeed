@@ -18,7 +18,7 @@
             app:title="@string/title_home"
             app:menu="@menu/menu_main" />
 
-    </com.google.android.material.appbarcompat.AppBarLayout>
+    </com.google.android.material.appbar.AppBarLayout>
 
     <!-- RecyclerView -->
     <androidx.recyclerview.widget.RecyclerView

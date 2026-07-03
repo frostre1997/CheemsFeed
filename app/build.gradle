@@ -3,10 +3,6 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
-def date = new Date()
-def formattedDate = date.format('yyyyMMdd') // Es: 20260702
-def formattedTime = date.format('HHmm')    // Es: 2146
-
 android {
     namespace 'com.frostre1997.cheemsfeed'
     compileSdk 34
@@ -16,14 +12,22 @@ android {
         minSdk 21
         targetSdk 34
         
-        versionCode formattedDate.toInteger()
-        versionName "1.0.${formattedTime}"
+        // Versione dinamica basata sul tempo
+        versionCode (new Date().format('yyMMddHHmm').toInteger())
+        versionName "1.0.${new Date().format('HHmm')}"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        debug {
+            // Android genera questo automaticamente
+        }
+    }
+
     buildTypes {
         release {
+            signingConfig signingConfigs.debug // Forza la firma anche in release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
@@ -45,4 +49,3 @@ dependencies {
     implementation 'com.squareup.retrofit2:retrofit:2.9.0'
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
 }
-    

@@ -37,7 +37,8 @@ class MainActivity : AppCompatActivity() {
             }
      
             override fun onFailure(call: Call<RedditResponse>, t: Throwable) {
-                Log.d("CheemsFeed", "Connection Failed: ${t.message}")
+                Log.e("CheemsFeed", "Connection Failed: ${t.message}")
+                android.widget.Toast.makeText(this@MainActivity, "Connection Failed: ${t.message}", android.widget.Toast.LENGTH_LONG).show()
             }
         })
     }

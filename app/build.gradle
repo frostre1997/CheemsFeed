@@ -7,27 +7,29 @@ android {
     namespace 'com.frostre1997.cheemsfeed'
     compileSdk 34
 
-    defaultConfig {
+        defaultConfig {
         applicationId "com.frostre1997.cheemsfeed"
         minSdk 21
         targetSdk 34
         
-        // Versione dinamica basata sul tempo
-        versionCode (new Date().format('yyMMddHHmm').toInteger())
+        versionCode (new Date().format('yyDDD').toInteger())
+        
         versionName "1.0.${new Date().format('HHmm')}"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        }
+    
     }
 
     signingConfigs {
         debug {
-            // Android genera questo automaticamente
+        
         }
     }
 
     buildTypes {
         release {
-            signingConfig signingConfigs.debug // Forza la firma anche in release
+            signingConfig signingConfigs.debug
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }

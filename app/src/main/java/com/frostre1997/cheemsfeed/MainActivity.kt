@@ -3,12 +3,11 @@ package com.frostre1997.cheemsfeed
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
-import androidx.recyclerview.widget.RecyclerView
-import androidx.recyclerview.widget.LinearLayoutManager
-import android.util.Log
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -21,23 +20,24 @@ class MainActivity : AppCompatActivity() {
     private fun fetchPosts() {
         val call = RetrofitClient.instance.getHotPosts()
         
-        call.enqueue(object : retrofit2.Call<RedditResponse> {
-            override fun onResponse(call: retrofit2.Call<RedditResponse>, response: Response<RedditResponse>) {
-                
+        // Correzione: deve implementare Callback, non solo Call
+        call.enqueue(object : Callback<RedditResponse> {
+            override fun onResponse(call: Call<RedditResponse>, response: Response<RedditResponse>) {
                 if (response.isSuccessful) {
-                  val posts = response.body()?.data?.children 
-                  
-                    val recyclerView = findViewById<androidx.recyclerview.widget.RecyclerView>(R.id.recyclerView)
-                recyclerView.layoutManager = androidx.recyclerview.widget.LinearLayoutManager(this@MainActivity)
-                recyclerView.adapter = PostAdapter(posts)
-            } else {
-                Log.d("CheemsFeed", "Error: ${response.code()}")
+                    val posts = response.body()?.data?.children 
+                    
+                    val recyclerView = findViewById<RecyclerView>(R.id.recyclerView)
+                    recyclerView.layoutManager = LinearLayoutManager(this@MainActivity)
+                    recyclerView.adapter = PostAdapter(posts ?: emptyList())
+                } else {
+                    Log.d("CheemsFeed", "Error: ${response.code()}")
+                }
             }
-
-        }
      
-        override fun onFailure(call: Call<RedditResponse>, t: Throwable) {
-            Log.d("CheemsFeed", "Connection Falied: ${t.message}")
-        }
-    })
+            override fun onFailure(call: Call<RedditResponse>, t: Throwable) {
+                Log.d("CheemsFeed", "Connection Failed: ${t.message}")
+            }
+        })
+    }
 }
+

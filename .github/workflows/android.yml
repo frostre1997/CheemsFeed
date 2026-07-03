@@ -27,10 +27,12 @@ jobs:
       - name: Build APK
         run: ./gradlew assembleRelease
 
+      - name: Rinomina APK
+        run: mv app/build/outputs/apk/release/app-release-unsigned.apk app/build/outputs/apk/release/CheemsFeed_v1.0.0.apk
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: CheemsFeed
-          # Usiamo il jolly (*) così trova il file indipendentemente dal nome esatto
-          path: app/build/outputs/apk/release/*.apk
+          name: CheemsFeed_v1.0.0
+          path: app/build/outputs/apk/release/CheemsFeed_v1.0.0.apk
           

@@ -11,10 +11,15 @@ data class ListingData(
 )
 
 data class PostContainer(
-    @SerializedName("data") val data: RedditPost
+    @SerializedName("data") val data: PostData
 )
 
-data class RedditPost(
+data class PostData(
     @SerializedName("title") val title: String,
-    @SerializedName("author") val author: String
+    @SerializedName("author") val author: String?,
+    @SerializedName("url") val url: String?,
+    @SerializedName("thumbnail") val thumbnail: String?,
+    @SerializedName("created_utc") val created_utc: Long?,
+    @SerializedName("num_comments") val num_comments: Int?,
+    @SerializedName("score") val score: Int?
 )

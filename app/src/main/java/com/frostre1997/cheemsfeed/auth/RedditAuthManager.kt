@@ -1,17 +1,16 @@
 package com.frostre1997.cheemsfeed.auth
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.util.Base64
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import com.frostre1997.cheemsfeed.network.RedditApi
 import com.google.gson.JsonObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.UUID
 
-class RedditAuthManager private constructor(
-    private val context: Context,
+class RedditAuthManager(
+    context: Context,
     private val wwwApi: RedditApi
 ) {
     companion object {
@@ -25,38 +24,14 @@ class RedditAuthManager private constructor(
         private const val KEY_REFRESH_TOKEN = "refresh_token"
         private const val KEY_TOKEN_EXPIRY = "token_expiry"
         private const val KEY_USERNAME = "username"
-
-        suspend fun create(context: Context, wwwApi: RedditApi): RedditAuthManager =
-            withContext(Dispatchers.IO) {
-                RedditAuthManager(context.applicationContext, wwwApi).also { it.initPrefs() }
-            }
     }
 
-    @Volatile
-    private var prefs: android.content.SharedPreferences? = null
-
-    private fun initPrefs() {
-        if (prefs != null) return
-        synchronized(this) {
-            if (prefs != null) return
-            prefs = try {
-                val key = MasterKey.Builder(context)
-                    .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-                    .build()
-                EncryptedSharedPreferences.create(
-                    context, PREFS_NAME, key,
-                    EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                    EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-                )
-            } catch (e: Exception) {
-                context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            }
-        }
-    }
+    private val prefs: SharedPreferences =
+        context.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     fun getAuthorizationUrl(): String {
         val state = UUID.randomUUID().toString()
-        prefs?.edit()?.putString("oauth_state", state)?.apply()
+        prefs.edit().putString("oauth_state", state).apply()
         return "$AUTH_BASE?" +
                 "client_id=$REDDIT_CLIENT_ID&" +
                 "response_type=code&" +
@@ -66,10 +41,10 @@ class RedditAuthManager private constructor(
                 "scope=identity,read,mysubreddits"
     }
 
-    fun getSavedState(): String? = prefs?.getString("oauth_state", null)
+    fun getSavedState(): String? = prefs.getString("oauth_state", null)
 
     fun clearState() {
-        prefs?.edit()?.remove("oauth_state")?.apply()
+        prefs.edit().remove("oauth_state").apply()
     }
 
     suspend fun exchangeCodeForToken(code: String): Boolean = withContext(Dispatchers.IO) {
@@ -92,8 +67,8 @@ class RedditAuthManager private constructor(
         }
     }
 
-    private suspend fun refreshAccessToken(): Boolean = withContext(Dispatchers.IO) {
-        val refreshToken = prefs?.getString(KEY_REFRESH_TOKEN, null) ?: return@withContext false
+    suspend fun refreshAccessToken(): Boolean = withContext(Dispatchers.IO) {
+        val refreshToken = prefs.getString(KEY_REFRESH_TOKEN, null) ?: return@withContext false
         try {
             val credentials = "$REDDIT_CLIENT_ID:$REDDIT_CLIENT_SECRET"
             val authHeader = "Basic " + Base64.encodeToString(
@@ -113,7 +88,7 @@ class RedditAuthManager private constructor(
     }
 
     suspend fun getValidAccessToken(): String? = withContext(Dispatchers.IO) {
-        val expiry = prefs?.getLong(KEY_TOKEN_EXPIRY, 0) ?: 0L
+        val expiry = prefs.getLong(KEY_TOKEN_EXPIRY, 0)
         if (System.currentTimeMillis() + 60000 > expiry) {
             val success = refreshAccessToken()
             if (!success && getAccessToken() == null) return@withContext null
@@ -123,21 +98,18 @@ class RedditAuthManager private constructor(
 
     fun isLoggedIn(): Boolean = getAccessToken() != null
 
-    fun getUserName(): String? = prefs?.getString(KEY_USERNAME, null)
-
     fun logout() {
-        prefs?.edit()?.clear()?.apply()
+        prefs.edit().clear().apply()
     }
 
     private fun storeTokens(response: com.frostre1997.cheemsfeed.model.TokenResponse) {
-        val expiryTime = System.currentTimeMillis() + (response.expires_in * 1000)
-        prefs?.edit()?.apply {
+        prefs.edit().apply {
             putString(KEY_ACCESS_TOKEN, response.access_token)
-            putLong(KEY_TOKEN_EXPIRY, expiryTime)
+            putLong(KEY_TOKEN_EXPIRY, System.currentTimeMillis() + response.expires_in * 1000)
             response.refresh_token?.let { putString(KEY_REFRESH_TOKEN, it) }
             apply()
         }
     }
 
-    private fun getAccessToken(): String? = prefs?.getString(KEY_ACCESS_TOKEN, null)
+    private fun getAccessToken(): String? = prefs.getString(KEY_ACCESS_TOKEN, null)
 }

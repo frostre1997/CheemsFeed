@@ -22,29 +22,28 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var viewModel: FeedViewModel
     private lateinit var adapter: PostAdapter
-    private lateinit var recyclerView: RecyclerView
     private lateinit var loadingView: android.widget.ProgressBar
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        val authManager = RedditAuthManager(this, RedditApiClient.wwwService)
         viewModel = ViewModelProvider(
             this,
-            FeedViewModel.Factory(RedditApiClient.oauthService, RedditApiClient.publicService)
+            FeedViewModel.Factory(RedditApiClient.oauthService, RedditApiClient.publicService, authManager)
         )[FeedViewModel::class.java]
 
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
 
         loadingView = findViewById(R.id.progressBar)
-        recyclerView = findViewById(R.id.recyclerView)
+        val recyclerView = findViewById<RecyclerView>(R.id.recyclerView)
         recyclerView.layoutManager = LinearLayoutManager(this)
 
         adapter = PostAdapter { post ->
             post.url?.let { url ->
-                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
-                startActivity(intent)
+                startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url)))
             }
         }
         recyclerView.adapter = adapter
@@ -61,11 +60,6 @@ class MainActivity : AppCompatActivity() {
                     Toast.makeText(this@MainActivity, state.error, Toast.LENGTH_SHORT).show()
                 }
             }
-        }
-
-        lifecycleScope.launch {
-            val authManager = RedditAuthManager.create(this@MainActivity, RedditApiClient.wwwService)
-            viewModel.setAuthManager(authManager)
         }
     }
 
@@ -90,19 +84,17 @@ class MainActivity : AppCompatActivity() {
 
     private fun showSortDialog() {
         val options = arrayOf("Hot", "New", "Top")
-        val mode = com.frostre1997.cheemsfeed.viewmodel.SortMode.entries
+        val modes = com.frostre1997.cheemsfeed.viewmodel.SortMode.entries
         androidx.appcompat.app.AlertDialog.Builder(this)
             .setTitle("Sort by")
             .setItems(options) { _, which ->
-                viewModel.setSortMode(mode[which])
+                viewModel.setSortMode(modes[which])
             }
             .show()
     }
 
     override fun onResume() {
         super.onResume()
-        if (viewModel.uiState.value.posts.isEmpty()) {
-            viewModel.fetchPosts()
-        }
+        viewModel.refreshLoginState()
     }
 }

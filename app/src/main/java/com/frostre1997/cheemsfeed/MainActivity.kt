@@ -8,6 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.frostre1997.cheemsfeed.auth.LoginActivity
 import com.frostre1997.cheemsfeed.auth.RedditAuthManager
 import com.frostre1997.cheemsfeed.network.RedditApiClient
 import com.frostre1997.cheemsfeed.viewmodel.FeedViewModel
@@ -76,7 +77,7 @@ class MainActivity : AppCompatActivity() {
                 true
             }
             R.id.action_login -> {
-                startActivity(android.content.Intent(this, auth.LoginActivity::class.java))
+                startActivity(android.content.Intent(this, LoginActivity::class.java))
                 true
             }
             else -> super.onOptionsItemSelected(item)

@@ -4,25 +4,22 @@ import android.content.Context
 import android.util.Base64
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
-import com.frostre1997.cheemsfeed.api.RedditApiService
-import com.frostre1997.cheemsfeed.api.TokenResponse
-import com.google.gson.Gson
+import com.frostre1997.cheemsfeed.network.RedditApi
 import com.google.gson.JsonObject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.util.*
+import java.util.UUID
 
 class RedditAuthManager(
     private val context: Context,
-    private val apiService: RedditApiService
+    private val wwwApi: RedditApi
 ) {
     companion object {
         private const val REDDIT_CLIENT_ID = "YOUR_REDDIT_CLIENT_ID"
         private const val REDDIT_CLIENT_SECRET = "YOUR_REDDIT_CLIENT_SECRET"
-        private const val REDDIT_REDIRECT_URI = "cheemsfeed://auth"
-        private const val REDDIT_AUTH_URL = "https://www.reddit.com/api/v1/authorize"
-        private const val REDDIT_TOKEN_URL = "https://oauth.reddit.com/api/v1/access_token"
-        
+        private const val REDIRECT_URI = "cheemsfeed://auth"
+        private const val AUTH_BASE = "https://www.reddit.com/api/v1/authorize"
+
         private const val PREFS_NAME = "reddit_auth"
         private const val KEY_ACCESS_TOKEN = "access_token"
         private const val KEY_REFRESH_TOKEN = "refresh_token"
@@ -34,59 +31,43 @@ class RedditAuthManager(
         .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
         .build()
 
-    private val encryptedPrefs = EncryptedSharedPreferences.create(
-        context,
-        PREFS_NAME,
-        masterKey,
+    private val prefs = EncryptedSharedPreferences.create(
+        context, PREFS_NAME, masterKey,
         EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
     )
 
-    private val gson = Gson()
-
-    /**
-     * Generate OAuth2 authorization URL
-     * User should open this URL in browser
-     */
     fun getAuthorizationUrl(): String {
         val state = UUID.randomUUID().toString()
-        saveState(state)
-        
-        return "$REDDIT_AUTH_URL?" +
+        prefs.edit().putString("oauth_state", state).apply()
+        return "$AUTH_BASE?" +
                 "client_id=$REDDIT_CLIENT_ID&" +
                 "response_type=code&" +
                 "state=$state&" +
-                "redirect_uri=$REDDIT_REDIRECT_URI&" +
+                "redirect_uri=$REDIRECT_URI&" +
                 "duration=permanent&" +
                 "scope=identity,read,mysubreddits"
     }
 
-    /**
-     * Exchange authorization code for access token
-     */
-    suspend fun exchangeCodeForToken(code: String): Boolean = withContext(Dispatchers.IO) {
-        return@withContext try {
-            // Create Basic Auth header (base64 encoded client_id:client_secret)
-            val credentials = "$REDDIT_CLIENT_ID:$REDDIT_CLIENT_SECRET"
-            val encodedCredentials = Base64.encodeToString(
-                credentials.toByteArray(),
-                Base64.NO_WRAP
-            )
-            val authHeader = "Basic $encodedCredentials"
+    fun getSavedState(): String? = prefs.getString("oauth_state", null)
 
-            // Build request body
+    fun clearState() {
+        prefs.edit().remove("oauth_state").apply()
+    }
+
+    suspend fun exchangeCodeForToken(code: String): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val credentials = "$REDDIT_CLIENT_ID:$REDDIT_CLIENT_SECRET"
+            val authHeader = "Basic " + Base64.encodeToString(
+                credentials.toByteArray(), Base64.NO_WRAP
+            )
             val body = JsonObject().apply {
                 addProperty("grant_type", "authorization_code")
                 addProperty("code", code)
-                addProperty("redirect_uri", REDDIT_REDIRECT_URI)
+                addProperty("redirect_uri", REDIRECT_URI)
             }
-
-            // Get token
-            val response = apiService.getAccessToken(authHeader, body)
-            
-            // Save tokens
-            saveTokens(response)
-            
+            val response = wwwApi.getAccessToken(authHeader, body)
+            storeTokens(response)
             true
         } catch (e: Exception) {
             e.printStackTrace()
@@ -94,28 +75,19 @@ class RedditAuthManager(
         }
     }
 
-    /**
-     * Refresh expired access token
-     */
-    suspend fun refreshAccessToken(): Boolean = withContext(Dispatchers.IO) {
-        return@withContext try {
-            val refreshToken = getRefreshToken() ?: return@withContext false
-
+    private suspend fun refreshAccessToken(): Boolean = withContext(Dispatchers.IO) {
+        val refreshToken = prefs.getString(KEY_REFRESH_TOKEN, null) ?: return@withContext false
+        try {
             val credentials = "$REDDIT_CLIENT_ID:$REDDIT_CLIENT_SECRET"
-            val encodedCredentials = Base64.encodeToString(
-                credentials.toByteArray(),
-                Base64.NO_WRAP
+            val authHeader = "Basic " + Base64.encodeToString(
+                credentials.toByteArray(), Base64.NO_WRAP
             )
-            val authHeader = "Basic $encodedCredentials"
-
             val body = JsonObject().apply {
                 addProperty("grant_type", "refresh_token")
                 addProperty("refresh_token", refreshToken)
             }
-
-            val response = apiService.getAccessToken(authHeader, body)
-            saveTokens(response)
-            
+            val response = wwwApi.getAccessToken(authHeader, body)
+            storeTokens(response)
             true
         } catch (e: Exception) {
             e.printStackTrace()
@@ -123,69 +95,32 @@ class RedditAuthManager(
         }
     }
 
-    /**
-     * Get valid access token (refresh if expired)
-     */
     suspend fun getValidAccessToken(): String? = withContext(Dispatchers.IO) {
-        val expiry = encryptedPrefs.getLong(KEY_TOKEN_EXPIRY, 0)
-        
-        // If token expires within next 60 seconds, refresh
+        val expiry = prefs.getLong(KEY_TOKEN_EXPIRY, 0)
         if (System.currentTimeMillis() + 60000 > expiry) {
-            if (!refreshAccessToken()) {
-                return@withContext null
-            }
+            val success = refreshAccessToken()
+            if (!success && getAccessToken() == null) return@withContext null
         }
-        
-        return@withContext getAccessToken()
+        getAccessToken()
     }
 
-    /**
-     * Check if user is logged in
-     */
-    fun isLoggedIn(): Boolean {
-        return getAccessToken() != null
-    }
+    fun isLoggedIn(): Boolean = getAccessToken() != null
 
-    /**
-     * Logout user
-     */
+    fun getUserName(): String? = prefs.getString(KEY_USERNAME, null)
+
     fun logout() {
-        encryptedPrefs.edit().apply {
-            remove(KEY_ACCESS_TOKEN)
-            remove(KEY_REFRESH_TOKEN)
-            remove(KEY_TOKEN_EXPIRY)
-            remove(KEY_USERNAME)
-            apply()
-        }
+        prefs.edit().clear().apply()
     }
 
-    private fun saveTokens(response: TokenResponse) {
+    private fun storeTokens(response: com.frostre1997.cheemsfeed.model.TokenResponse) {
         val expiryTime = System.currentTimeMillis() + (response.expires_in * 1000)
-        
-        encryptedPrefs.edit().apply {
+        prefs.edit().apply {
             putString(KEY_ACCESS_TOKEN, response.access_token)
             putLong(KEY_TOKEN_EXPIRY, expiryTime)
+            response.refresh_token?.let { putString(KEY_REFRESH_TOKEN, it) }
             apply()
         }
     }
 
-    private fun getAccessToken(): String? {
-        return encryptedPrefs.getString(KEY_ACCESS_TOKEN, null)
-    }
-
-    private fun getRefreshToken(): String? {
-        return encryptedPrefs.getString(KEY_REFRESH_TOKEN, null)
-    }
-
-    private fun saveState(state: String) {
-        encryptedPrefs.edit().putString("oauth_state", state).apply()
-    }
-
-    fun getState(): String? {
-        return encryptedPrefs.getString("oauth_state", null)
-    }
-
-    fun clearState() {
-        encryptedPrefs.edit().remove("oauth_state").apply()
-    }
+    private fun getAccessToken(): String? = prefs.getString(KEY_ACCESS_TOKEN, null)
 }

@@ -5,7 +5,11 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [SavedPost::class, UserProfile::class], version = 1, exportSchema = false)
+@Database(
+    entities = [SavedPost::class, UserProfile::class],
+    version = 1,
+    exportSchema = false
+)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun savedPostDao(): SavedPostDao
     abstract fun userProfileDao(): UserProfileDao
@@ -16,13 +20,11 @@ abstract class AppDatabase : RoomDatabase() {
 
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
-                val instance = Room.databaseBuilder(
+                Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
                     "cheemsfeed_database"
-                ).build()
-                INSTANCE = instance
-                instance
+                ).fallbackToDestructiveMigration().build().also { INSTANCE = it }
             }
         }
     }

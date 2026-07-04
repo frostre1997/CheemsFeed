@@ -5,8 +5,7 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "saved_posts")
 data class SavedPost(
-    @PrimaryKey
-    val id: String,
+    @PrimaryKey val id: String,
     val title: String,
     val content: String,
     val author: String,
@@ -23,8 +22,7 @@ data class SavedPost(
 
 @Entity(tableName = "user_profiles")
 data class UserProfile(
-    @PrimaryKey
-    val username: String,
+    @PrimaryKey val username: String,
     val userId: String,
     val linkKarma: Long,
     val commentKarma: Long,

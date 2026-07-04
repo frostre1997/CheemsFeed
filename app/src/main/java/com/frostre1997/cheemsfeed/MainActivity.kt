@@ -1,42 +1,67 @@
 package com.frostre1997.cheemsfeed
 
-import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
-import android.widget.FrameLayout
-import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.frostre1997.cheemsfeed.auth.RedditAuthManager
+import com.frostre1997.cheemsfeed.network.RedditApiClient
+import com.frostre1997.cheemsfeed.viewmodel.FeedViewModel
 import com.google.android.material.appbar.MaterialToolbar
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
+import com.google.android.material.floatingactionbutton.FloatingActionButton
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
+    private lateinit var viewModel: FeedViewModel
+    private lateinit var adapter: PostAdapter
     private lateinit var recyclerView: RecyclerView
-    private lateinit var loadingContainer: FrameLayout
-    private lateinit var progressBar: ProgressBar
+    private lateinit var loadingView: android.widget.ProgressBar
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Setup toolbar
+        val authManager = RedditAuthManager(this, RedditApiClient.wwwService)
+        viewModel = FeedViewModel(
+            RedditApiClient.oauthService,
+            RedditApiClient.publicService,
+            authManager
+        )
+
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
         setSupportActionBar(toolbar)
 
+        loadingView = findViewById(R.id.progressBar)
         recyclerView = findViewById(R.id.recyclerView)
-        loadingContainer = findViewById(R.id.loadingContainer)
-        progressBar = findViewById(R.id.progressBar)
-
         recyclerView.layoutManager = LinearLayoutManager(this)
 
-        fetchPosts()
+        adapter = PostAdapter { post ->
+            post.url?.let { url ->
+                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                startActivity(intent)
+            }
+        }
+        recyclerView.adapter = adapter
+
+        findViewById<FloatingActionButton>(R.id.fab_sort).setOnClickListener {
+            showSortDialog()
+        }
+
+        lifecycleScope.launch {
+            viewModel.uiState.collectLatest { state ->
+                loadingView.visibility = if (state.isLoading) android.view.View.VISIBLE else android.view.View.GONE
+                adapter.submitList(state.posts)
+                if (state.error != null) {
+                    Toast.makeText(this@MainActivity, state.error, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -47,57 +72,30 @@ class MainActivity : AppCompatActivity() {
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             R.id.action_settings -> {
-                startActivity(Intent(this, SettingsActivity::class.java))
+                startActivity(android.content.Intent(this, SettingsActivity::class.java))
+                true
+            }
+            R.id.action_login -> {
+                startActivity(android.content.Intent(this, auth.LoginActivity::class.java))
                 true
             }
             else -> super.onOptionsItemSelected(item)
         }
     }
 
-    private fun fetchPosts() {
-        val call = RetrofitClient.instance.getHotPosts("Doge")
-
-        call.enqueue(object : Callback<RedditResponse> {
-            override fun onResponse(
-                call: Call<RedditResponse>,
-                response: Response<RedditResponse>
-            ) {
-                loadingContainer.visibility = android.view.View.GONE
-                recyclerView.visibility = android.view.View.VISIBLE
-
-                if (response.isSuccessful) {
-                    val body = response.body()
-                    if (body != null) {
-                        val posts = body.data.children.map { it.data }
-                        recyclerView.adapter = PostAdapter(posts)
-                    } else {
-                        Toast.makeText(
-                            this@MainActivity,
-                            "Empty Response",
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                } else {
-                    Log.e("CheemsFeed", "API Error: ${response.code()}")
-                    Toast.makeText(
-                        this@MainActivity,
-                        "Error: ${response.code()}",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                }
+    private fun showSortDialog() {
+        val options = arrayOf("Hot", "New", "Top")
+        val mode = com.frostre1997.cheemsfeed.viewmodel.SortMode.entries
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("Sort by")
+            .setItems(options) { _, which ->
+                viewModel.setSortMode(mode[which])
             }
+            .show()
+    }
 
-            override fun onFailure(call: Call<RedditResponse>, t: Throwable) {
-                loadingContainer.visibility = android.view.View.GONE
-                recyclerView.visibility = android.view.View.VISIBLE
-
-                Log.e("CheemsFeed", "Connection Failed", t)
-                Toast.makeText(
-                    this@MainActivity,
-                    "Network error: ${t.message}",
-                    Toast.LENGTH_LONG
-                ).show()
-            }
-        })
+    override fun onResume() {
+        super.onResume()
+        viewModel.fetchPosts()
     }
 }

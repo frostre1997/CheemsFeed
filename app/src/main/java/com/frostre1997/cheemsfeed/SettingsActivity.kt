@@ -2,18 +2,15 @@ package com.frostre1997.cheemsfeed
 
 import android.content.SharedPreferences
 import android.os.Bundle
+import android.widget.ArrayAdapter
+import android.widget.Spinner
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
-import android.widget.Spinner
-import android.widget.ArrayAdapter
-import com.google.android.material.switchmaterial.SwitchMaterial
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.switchmaterial.SwitchMaterial
 
 class SettingsActivity : AppCompatActivity() {
-    private lateinit var themeSpinner: Spinner
-    private lateinit var materialYouToggle: SwitchMaterial
-    private lateinit var logoutButton: MaterialButton
+
     private lateinit var prefs: SharedPreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -22,53 +19,49 @@ class SettingsActivity : AppCompatActivity() {
 
         prefs = getSharedPreferences("settings", MODE_PRIVATE)
 
-        // Setup toolbar
-        val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
+        val toolbar = findViewById<com.google.android.material.appbar.MaterialToolbar>(R.id.toolbar)
         toolbar.setNavigationOnClickListener { finish() }
 
-        // Setup theme spinner
-        themeSpinner = findViewById(R.id.themeSpinner)
+        val themeSpinner = findViewById<Spinner>(R.id.themeSpinner)
         val themes = arrayOf("Auto (System)", "Light", "Dark")
-        val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, themes)
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        themeSpinner.adapter = adapter
+        themeSpinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, themes)
+            .also { it.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item) }
 
-        // Load saved theme
         val savedTheme = prefs.getInt("theme_mode", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
-        val themeIndex = when (savedTheme) {
-            AppCompatDelegate.MODE_NIGHT_NO -> 1
-            AppCompatDelegate.MODE_NIGHT_YES -> 2
-            else -> 0
-        }
-        themeSpinner.setSelection(themeIndex)
+        themeSpinner.setSelection(
+            when (savedTheme) {
+                AppCompatDelegate.MODE_NIGHT_NO -> 1
+                AppCompatDelegate.MODE_NIGHT_YES -> 2
+                else -> 0
+            }
+        )
 
         themeSpinner.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: android.widget.AdapterView<*>, view: android.view.View?, position: Int, id: Long) {
-                val themeMode = when (position) {
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: android.view.View?, pos: Int, id: Long) {
+                val mode = when (pos) {
                     1 -> AppCompatDelegate.MODE_NIGHT_NO
                     2 -> AppCompatDelegate.MODE_NIGHT_YES
                     else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
                 }
-                prefs.edit().putInt("theme_mode", themeMode).apply()
-                AppCompatDelegate.setDefaultNightMode(themeMode)
+                prefs.edit().putInt("theme_mode", mode).apply()
+                AppCompatDelegate.setDefaultNightMode(mode)
             }
 
             override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
         }
 
-        // Setup Material You toggle
-        materialYouToggle = findViewById(R.id.materialYouToggle)
+        val materialYouToggle = findViewById<SwitchMaterial>(R.id.materialYouToggle)
         materialYouToggle.isChecked = prefs.getBoolean("material_you", android.os.Build.VERSION.SDK_INT >= 31)
         materialYouToggle.setOnCheckedChangeListener { _, isChecked ->
             prefs.edit().putBoolean("material_you", isChecked).apply()
-            // Restart app to apply Material You colors
             recreate()
         }
 
-        // Setup logout button
-        logoutButton = findViewById(R.id.logoutButton)
-        logoutButton.setOnClickListener {
-            prefs.edit().clear().apply()
+        findViewById<MaterialButton>(R.id.logoutButton).setOnClickListener {
+            com.frostre1997.cheemsfeed.auth.RedditAuthManager(
+                this,
+                com.frostre1997.cheemsfeed.network.RedditApiClient.wwwService
+            ).logout()
             finish()
         }
     }

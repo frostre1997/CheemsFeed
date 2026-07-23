@@ -33,10 +33,7 @@ class MainActivity : AppCompatActivity() {
         // ===== UPDATED: Use the new ViewModel =====
         viewModel = ViewModelProvider(
             this,
-            FeedViewModel.Factory(
-                RedditApiClient.publicService, // Now using public service
-                authManager
-            )
+            RedditViewModelFactory(RedditApiClient.publicService, authManager)
         )[FeedViewModel::class.java]
 
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)

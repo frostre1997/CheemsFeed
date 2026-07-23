@@ -28,10 +28,15 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val authManager = RedditAuthManager(this, RedditApiClient.wwwService)
+        val authManager = RedditAuthManager(this, RedditApiClient.publicService)
+        
+        // ===== UPDATED: Use the new ViewModel =====
         viewModel = ViewModelProvider(
             this,
-            FeedViewModel.Factory(RedditApiClient.oauthService, RedditApiClient.publicService, authManager)
+            FeedViewModel.Factory(
+                RedditApiClient.publicService, // Now using public service
+                authManager
+            )
         )[FeedViewModel::class.java]
 
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
@@ -53,6 +58,9 @@ class MainActivity : AppCompatActivity() {
             showSortDialog()
         }
 
+        // ===== LOAD FEED ON STARTUP =====
+        viewModel.loadFeed("all", FeedViewModel.SortMode.HOT)
+
         lifecycleScope.launch {
             viewModel.uiState.collectLatest { state ->
                 loadingView.visibility = if (state.isLoading) android.view.View.VISIBLE else android.view.View.GONE
@@ -60,6 +68,7 @@ class MainActivity : AppCompatActivity() {
                 if (state.error != null) {
                     Toast.makeText(this@MainActivity, state.error, Toast.LENGTH_SHORT).show()
                 }
+                // Handle pagination if you add a scroll listener
             }
         }
     }
@@ -84,8 +93,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showSortDialog() {
-        val options = arrayOf("Hot", "New", "Top")
-        val modes = com.frostre1997.cheemsfeed.viewmodel.SortMode.entries
+        val options = arrayOf("Hot", "New", "Top", "Rising")
+        val modes = FeedViewModel.SortMode.entries.toTypedArray()
         androidx.appcompat.app.AlertDialog.Builder(this)
             .setTitle("Sort by")
             .setItems(options) { _, which ->
@@ -96,6 +105,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        viewModel.refreshLoginState()
+        viewModel.refresh()
     }
 }

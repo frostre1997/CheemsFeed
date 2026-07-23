@@ -2,9 +2,9 @@ package com.frostre1997.cheemsfeed.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.frostre1997.cheemsfeed.auth.RedditAuthManager
 import com.frostre1997.cheemsfeed.network.PublicPost
-import com.frostre1997.cheemsfeed.network.RedditApiClient
-import com.frostre1997.cheemsfeed.network.PublicFeedResponse
+import com.frostre1997.cheemsfeed.network.RedditApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,7 +22,11 @@ enum class SortMode {
     HOT, NEW, TOP, RISING
 }
 
-class FeedViewModel : ViewModel() {
+// 👇 NOW ACCEPTS THE SERVICE AND AUTH MANAGER
+class FeedViewModel(
+    private val publicService: RedditApi,
+    private val authManager: RedditAuthManager
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FeedUiState())
     val uiState: StateFlow<FeedUiState> = _uiState.asStateFlow()
@@ -48,10 +52,10 @@ class FeedViewModel : ViewModel() {
             try {
                 val after = if (loadMore) _uiState.value.after else null
                 val response = when (sort) {
-                    SortMode.HOT -> RedditApiClient.publicService.getHotPosts(subreddit, 25, after)
-                    SortMode.NEW -> RedditApiClient.publicService.getNewPosts(subreddit, 25, after)
-                    SortMode.TOP -> RedditApiClient.publicService.getTopPosts(subreddit, 25, "day", after)
-                    SortMode.RISING -> RedditApiClient.publicService.getRisingPosts(subreddit, 25, after)
+                    SortMode.HOT -> publicService.getHotPosts(subreddit, 25, after)
+                    SortMode.NEW -> publicService.getNewPosts(subreddit, 25, after)
+                    SortMode.TOP -> publicService.getTopPosts(subreddit, 25, "day", after)
+                    SortMode.RISING -> publicService.getRisingPosts(subreddit, 25, after)
                 }
 
                 if (response.isSuccessful) {

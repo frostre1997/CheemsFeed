@@ -33,11 +33,11 @@ class PostAdapter(
     class PostViewHolder(private val binding: ItemPostBinding) :
         RecyclerView.ViewHolder(binding.root) {
         fun bind(post: PublicPost) {
-            binding.titleTextView.text = post.title
-            binding.subredditTextView.text = post.subreddit
-            binding.scoreTextView.text = post.score.toString()
-            binding.commentsTextView.text = "${post.numComments} comments"
-            // You can also load thumbnail if available
+            // MAKE SURE THESE IDs EXACTLY MATCH YOUR item_post.xml
+            binding.tvTitle.text = post.title
+            binding.tvSubreddit.text = post.subreddit
+            binding.tvScore.text = post.score.toString()
+            binding.tvComments.text = "${post.numComments} comments"
         }
     }
 }

@@ -9,14 +9,12 @@ class RedditCookieJar : CookieJar {
 
     override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
         val host = url.host
-        val existing = cookieStore[host] ?: mutableListOf()
-        existing.addAll(cookies)
-        cookieStore[host] = existing
+        val list = cookieStore.getOrPut(host) { mutableListOf() }
+        list.addAll(cookies)
     }
 
     override fun loadForRequest(url: HttpUrl): List<Cookie> {
-        val host = url.host
-        return cookieStore[host] ?: emptyList()
+        return cookieStore[url.host] ?: emptyList()
     }
 
     fun clearCookies() {

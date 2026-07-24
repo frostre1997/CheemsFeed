@@ -13,6 +13,8 @@ import com.frostre1997.cheemsfeed.auth.LoginActivity
 import com.frostre1997.cheemsfeed.auth.RedditAuthManager
 import com.frostre1997.cheemsfeed.network.RedditApiClient
 import com.frostre1997.cheemsfeed.viewmodel.FeedViewModel
+import com.frostre1997.cheemsfeed.viewmodel.FeedViewModelFactory
+import com.frostre1997.cheemsfeed.viewmodel.SortMode
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.coroutines.flow.collectLatest
@@ -30,10 +32,10 @@ class MainActivity : AppCompatActivity() {
 
         val authManager = RedditAuthManager(this, RedditApiClient.publicService)
         
-        // ===== UPDATED: Use the new ViewModel =====
+        // ===== FIXED: Use the correct factory name =====
         viewModel = ViewModelProvider(
             this,
-            RedditViewModelFactory(RedditApiClient.publicService, authManager)
+            FeedViewModelFactory(RedditApiClient.publicService, authManager)  
         )[FeedViewModel::class.java]
 
         val toolbar = findViewById<MaterialToolbar>(R.id.toolbar)
@@ -55,8 +57,8 @@ class MainActivity : AppCompatActivity() {
             showSortDialog()
         }
 
-        // ===== LOAD FEED ON STARTUP =====
-        viewModel.loadFeed("all", FeedViewModel.SortMode.HOT)
+        // ===== FIXED: Use SortMode directly =====
+        viewModel.loadFeed("all", SortMode.HOT)
 
         lifecycleScope.launch {
             viewModel.uiState.collectLatest { state ->
@@ -65,7 +67,6 @@ class MainActivity : AppCompatActivity() {
                 if (state.error != null) {
                     Toast.makeText(this@MainActivity, state.error, Toast.LENGTH_SHORT).show()
                 }
-                // Handle pagination if you add a scroll listener
             }
         }
     }
@@ -91,7 +92,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun showSortDialog() {
         val options = arrayOf("Hot", "New", "Top", "Rising")
-        val modes = FeedViewModel.SortMode.entries.toTypedArray()
+        val modes = SortMode.entries.toTypedArray()
         androidx.appcompat.app.AlertDialog.Builder(this)
             .setTitle("Sort by")
             .setItems(options) { _, which ->

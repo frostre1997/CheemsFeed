@@ -5,6 +5,8 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.frostre1997.cheemsfeed.databinding.ItemPostBinding
 import com.frostre1997.cheemsfeed.network.PublicPost
+import java.text.SimpleDateFormat
+import java.util.*
 
 class PostAdapter(
     private val onItemClick: (PublicPost) -> Unit
@@ -33,11 +35,26 @@ class PostAdapter(
     class PostViewHolder(private val binding: ItemPostBinding) :
         RecyclerView.ViewHolder(binding.root) {
         fun bind(post: PublicPost) {
-            // MAKE SURE THESE IDs EXACTLY MATCH YOUR item_post.xml
-            binding.tvTitle.text = post.title
-            binding.tvSubreddit.text = post.subreddit
-            binding.tvScore.text = post.score.toString()
-            binding.tvComments.text = "${post.numComments} comments"
+            // Match your layout IDs
+            binding.postTitle.text = post.title
+            
+            // Author (handle null)
+            binding.postAuthor.text = post.author ?: "Unknown"
+            
+            // Date (format the timestamp)
+            post.createdUtc?.let { timestamp ->
+                val date = Date((timestamp * 1000).toLong())
+                val formatter = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+                binding.postDate.text = formatter.format(date)
+            } ?: run {
+                binding.postDate.text = ""
+            }
+            
+            // Score
+            binding.scoreText.text = "⬆ ${post.score}"
+            
+            // Comments
+            binding.commentsText.text = "${post.numComments} comments"
         }
     }
 }

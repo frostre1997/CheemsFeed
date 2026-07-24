@@ -34,7 +34,7 @@ data class PublicPost(
     @SerializedName("subreddit_name_prefixed")
     val subredditPrefixed: String,
     @SerializedName("created_utc")
-    val createdUtc: Double,
+    val createdUtc: Double? = null, 
     val thumbnail: String?,
     val selftext: String?,
     val author: String?,
